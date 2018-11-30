@@ -31,6 +31,13 @@ lazy_static! {
         m.insert(4, Color::RGB(0xED, 0xE0, 0xC8));
         m.insert(8, Color::RGB(0xF2, 0xB1, 0x79));
         m.insert(16, Color::RGB(0xF5, 0x95, 0x63));
+        m.insert(32, Color::RGB(0xF5, 0x7C, 0x5F));
+        m.insert(64, Color::RGB(0xF6, 0x5D, 0x3B));
+        m.insert(128, Color::RGB(0xEC, 0xCF, 0x6D));
+        m.insert(256, Color::RGB(0xED, 0xCC, 0x63));
+        m.insert(512, Color::RGB(0xEC, 0xC8, 0x50));
+        m.insert(1024, Color::RGB(0xED, 0xC4, 0x3F));
+        m.insert(2048, Color::RGB(0xEE, 0xC2, 0x2E));
         m
     };
 }
@@ -101,13 +108,18 @@ impl Grid {
         self.grid[place.row as usize][place.column as usize]
     }
     fn draw(&self, canvas: &mut WindowCanvas, font: &ttf::Font) {
+        let dark_text_color: Color = Color::RGB(0x78, 0x6f, 0x66);
+        let light_text_color: Color = Color::RGB(0xFD, 0xF3, 0xF1);
+
         fn grid_to_real(pos: (usize, usize)) -> (usize, usize) {
             (
                 pos.0 * (TILE_SIZE + TILE_PADDING) + TILE_PADDING,
-                pos.1 * (TILE_SIZE + TILE_PADDING) + TILE_PADDING
+                pos.1 * (TILE_SIZE + TILE_PADDING) + TILE_PADDING,
             )
         }
+
         canvas.set_draw_color(Color::RGB(0xCD, 0xC0, 0xB4));
+
         for row in 0..GRID_SIZE {
             for column in 0..GRID_SIZE {
                 // Draw squares
@@ -118,15 +130,24 @@ impl Grid {
                 }
                 let pos = grid_to_real((column, row));
                 canvas
-                    .fill_rect(Rect::new(pos.0 as i32, pos.1 as i32, TILE_SIZE as u32, TILE_SIZE as u32))
-                    .unwrap();
+                    .fill_rect(Rect::new(
+                        pos.0 as i32,
+                        pos.1 as i32,
+                        TILE_SIZE as u32,
+                        TILE_SIZE as u32,
+                    )).unwrap();
                 // Draw numbers
                 if self.grid[row][column] > 0 {
                     let texture_creator = canvas.texture_creator();
                     let texture: sdl2::render::Texture = {
                         let text = format!("{}", self.grid[row][column]);
                         let partial = font.render(text.as_str());
-                        let surface = partial.blended(Color::RGB(0x78, 0x6f, 0x66)).unwrap();
+                        let surface = partial
+                            .blended(if self.grid[row][column] <= 4 {
+                                dark_text_color
+                            } else {
+                                light_text_color
+                            }).unwrap();
                         texture_creator
                             .create_texture_from_surface(surface)
                             .unwrap()
@@ -154,6 +175,10 @@ impl Grid {
         if self.at(&place) != 0 {
             if self.at(&peek) == 0 {
                 self.grid[peek.row as usize][peek.column as usize] = self.at(&place);
+                self.grid[place.row as usize][place.column as usize] = 0;
+                true
+            } else if self.at(&peek) == self.at(&place) {
+                self.grid[peek.row as usize][peek.column as usize] = self.at(&place) * 2;
                 self.grid[place.row as usize][place.column as usize] = 0;
                 true
             } else {
