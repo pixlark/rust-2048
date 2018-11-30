@@ -10,4 +10,4 @@ rand = "0.6.1"
 [dependencies.sdl2]
 version = "0.31.0"
 default-features = false
-features = ["image"]
+features = ["image", "ttf"]
