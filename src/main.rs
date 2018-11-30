@@ -4,7 +4,7 @@ extern crate sdl2;
 #[macro_use]
 extern crate lazy_static;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use rand::{thread_rng, Rng};
 
@@ -55,6 +55,7 @@ impl v2 {
     }
 }
 
+#[derive(Copy, Clone)]
 enum Direction {
     North,
     West,
@@ -268,7 +269,42 @@ impl Grid {
     }
 }
 
+fn make_moves(grid: &mut Grid, move_queue: &mut VecDeque<Direction>) {
+    while !move_queue.is_empty() {
+        let direction = move_queue.pop_front().unwrap();
+        grid.shift(direction);
+        grid.insert_random_tile();
+    }
+}
+
+trait GameState {
+    fn event(&mut self, event: Event);
+    fn update(&mut self);
+    fn render(&mut self, canvas: &mut WindowCanvas, font: &ttf::Font);
+}
+
+struct PlayingState {
+    move_queue: VecDeque<Direction>,
+    grid: Grid,
+}
+
+trait Stack<T> {
+    fn top(&self) -> Option<&T>;
+}
+
+impl<T> Stack<T> for Vec<T> {
+    fn top(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(&self[self.len() - 1])
+        }
+    }
+}
+
 fn main() {
+    let mut state_stack: Vec<Box<dyn GameState>> = Vec::new();
+    
     let sdl_context = sdl2::init().unwrap();
     let ttf_context: ttf::Sdl2TtfContext = ttf::init().unwrap();
 
@@ -289,12 +325,17 @@ fn main() {
         window.into_canvas().build().unwrap()
     };
 
+    let mut move_queue: VecDeque<Direction> = VecDeque::new();
     let mut grid = Grid::empty();
     grid.insert_random_tile();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
         for event in event_pump.poll_iter() {
+            /*
+            match state_stack.top() {
+                GameStat:e:Playing => 
+            }*/
             match event {
                 Event::Quit { .. } => break 'running,
                 Event::KeyDown {
@@ -305,8 +346,7 @@ fn main() {
                     keycode: Some(Keycode::Up),
                     ..
                 } => {
-                    grid.shift(Direction::North);
-                    grid.insert_random_tile();
+                    move_queue.push_back(Direction::North);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::A),
@@ -316,8 +356,7 @@ fn main() {
                     keycode: Some(Keycode::Left),
                     ..
                 } => {
-                    grid.shift(Direction::West);
-                    grid.insert_random_tile();
+                    move_queue.push_back(Direction::West);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::S),
@@ -327,8 +366,7 @@ fn main() {
                     keycode: Some(Keycode::Down),
                     ..
                 } => {
-                    grid.shift(Direction::South);
-                    grid.insert_random_tile();
+                    move_queue.push_back(Direction::South);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::D),
@@ -338,12 +376,12 @@ fn main() {
                     keycode: Some(Keycode::Right),
                     ..
                 } => {
-                    grid.shift(Direction::East);
-                    grid.insert_random_tile();
+                    move_queue.push_back(Direction::East);
                 }
                 _ => (),
             }
         }
+        make_moves(&mut grid, &mut move_queue);
         canvas.set_draw_color(Color::RGB(0xBB, 0xAD, 0xA0));
         canvas
             .fill_rect(Rect::new(0, 0, WINDOW_SIZE as u32, WINDOW_SIZE as u32))
