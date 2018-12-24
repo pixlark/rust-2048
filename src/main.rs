@@ -267,6 +267,21 @@ impl Grid {
         let choice: u64 = *rng.choose(&[2, 4]).unwrap();
         self.grid[row][column] = choice;
     }
+    fn get_fitness(&self) -> usize {
+        if self.is_full() {
+            // Kind of a hack...
+            return std::usize::MAX;
+        }
+        let mut fitness: usize = 0;
+        for row in 0..GRID_SIZE {
+            for column in 0..GRID_SIZE {
+                if self.at(&v2::new(row as i32, column as i32)) != 0 {
+                    fitness += 1;
+                }
+            }
+        }
+        return fitness;
+    }
 }
 
 fn make_moves(grid: &mut Grid, move_queue: &mut VecDeque<Direction>) {
